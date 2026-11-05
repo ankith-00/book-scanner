@@ -1,0 +1,117 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Version-One | Book Scanner</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('images', filename='logo.svg') }}">
+
+<!-- Google Fonts: Poppins & Bebas Neue -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+    /* Apply Poppins font throughout the entire app */
+    *,
+    ::before,
+    ::after {
+        font-family: 'Poppins', sans-serif !important;
+    }
+
+    /* Navbar logo font: Bebas Neue */
+    .font-bebas,
+    #navbar-logo {
+        font-family: 'Bebas Neue', sans-serif !important;
+    }
+
+    /* Enforce 0.4em border radius throughout the interface */
+    button,
+    input,
+    kbd,
+    aside,
+    header,
+    .page-card,
+    #review-drawer,
+    .custom-radius {
+        border-radius: 0.4em !important;
+    }
+
+    @media (min-width: 768px) {
+        #camera-box {
+            border-radius: 0.4em !important;
+        }
+    }
+
+    /* Mobile specific overrides: strictly NO border/radius on mobile camera feed */
+    @media (max-width: 767px) {
+
+        /* Size layout to the truly visible viewport (excludes Chrome/Safari browser UI).
+               100vh extends behind the browser bar, hiding the header and pushing the
+               split line below the user's visual center. Browsers without `svh` keep 100vh. */
+        body {
+            height: 100svh !important;
+        }
+
+        #camera-box,
+        #camera-box video,
+        section {
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        /* Classic circular shutter and pages buttons on mobile */
+        #mobile-capture-btn,
+        #mobile-capture-btn span,
+        #mobile-drawer-btn {
+            border-radius: 9999px !important;
+        }
+    }
+
+    /* Custom scrollbar styling for light theme */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 0.4em;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 0.4em;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* Draggable guide lines: stop native touch scrolling while dragging */
+    #split-line-mobile,
+    #split-line-desktop,
+    #crop-line-top,
+    #crop-line-bottom,
+    #crop-line-top-desktop,
+    #crop-line-bottom-desktop {
+        touch-action: none;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+</style>

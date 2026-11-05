@@ -1,0 +1,38 @@
+// Export: the server packs the stored split pages into a PDF for download
+async function exportPdf(btn) {
+    if (!btn || btn.dataset.exporting === '1') return;
+
+    const label = btn.querySelector('span');
+    const original = label ? label.textContent : 'Export as PDF';
+
+    btn.dataset.exporting = '1';
+    btn.classList.add('pointer-events-none', 'opacity-60');
+    if (label) label.textContent = 'Exporting…';
+
+    try {
+        const res = await fetch('/export-pdf');
+        if (!res.ok) throw new Error('Could not export PDF');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'scanned_book.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error('Export failed, opening direct link instead', err);
+        window.location.href = '/export-pdf';
+    } finally {
+        btn.dataset.exporting = '0';
+        btn.classList.remove('pointer-events-none', 'opacity-60');
+        if (label) label.textContent = original;
+    }
+}
+
+[desktopExportBtn, drawerDownloadBtn].filter(Boolean).forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        exportPdf(btn);
+    });
+});

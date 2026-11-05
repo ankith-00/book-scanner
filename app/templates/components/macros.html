@@ -1,0 +1,9 @@
+{% macro mobile_page_item(page_b64, index) -%}
+<div class="page-scroll-item w-full max-w-lg @container">
+    <!-- Page preview card: upright page runs within the reserved box; label sits below. -->
+    <div class="relative w-full rounded-[0.4em] border border-neutral-200 overflow-hidden bg-neutral-100 pt-[0.75em] pb-[1.5em] h-[calc(100cqw+2.25em)]">
+        <img src="data:image/jpeg;base64,{{ page_b64 }}" alt="Page {{ index }}" class="w-full h-full object-contain">
+        <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-[11px] font-medium text-neutral-600">Page {{ index }}</span>
+    </div>
+</div>
+{%- endmacro %}

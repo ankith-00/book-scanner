@@ -1,0 +1,496 @@
+// Initialize Camera Stream with High-Resolution Constraints and Fallback
+function startScannerCamera() {
+    if (isDesktopLayout()) return;
+    navigator.mediaDevices.getUserMedia({
+        video: {
+            facingMode: 'environment',
+            width: { ideal: 3840 },
+            height: { ideal: 2160 }
+        }
+    })
+    .then(stream => {
+        video.srcObject = stream;
+    })
+    .catch(err => {
+        console.warn("High-res environment camera failed, falling back to basic camera", err);
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err2 => {
+                alert("Camera access denied or unavailable: " + err2.message);
+            });
+    });
+}
+
+// Trigger Shutter Flash Effect
+function flashShutter() {
+    cameraFlash.style.opacity = '0.75';
+    setTimeout(() => {
+        cameraFlash.style.opacity = '0';
+    }, 120);
+}
+
+// Toggle spinner + disabled state on both capture buttons while a spread uploads
+function setCaptureLoading(loading) {
+    const shutterFill = document.getElementById('mobile-shutter-fill');
+    const mobileSpinner = document.getElementById('mobile-capture-spinner');
+    const desktopSpinner = document.getElementById('desktop-capture-spinner');
+    const desktopLabel = document.getElementById('desktop-capture-label');
+
+    if (mobileCaptureBtn) mobileCaptureBtn.classList.toggle('pointer-events-none', loading);
+    if (desktopCaptureBtn) {
+        desktopCaptureBtn.classList.toggle('pointer-events-none', loading);
+        desktopCaptureBtn.classList.toggle('opacity-60', loading);
+    }
+
+    if (shutterFill) shutterFill.classList.toggle('opacity-0', loading);
+    if (mobileSpinner) mobileSpinner.classList.toggle('hidden', !loading);
+    if (desktopSpinner) desktopSpinner.classList.toggle('hidden', !loading);
+    if (desktopLabel) desktopLabel.textContent = loading ? 'Scanning…' : 'Scan';
+}
+
+// Split Guide Line (Red Line) Drag Logic
+const splitLineMobile = document.getElementById('split-line-mobile');
+const splitLineDesktop = document.getElementById('split-line-desktop');
+const cameraBoxEl = document.getElementById('camera-box');
+let splitFraction = 0.5;
+let splitDragging = false;
+
+function isDesktopLayout() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 768px)').matches;
+}
+
+function applySplitPosition(frac) {
+    splitFraction = Math.min(0.98, Math.max(0.02, frac));
+    if (isDesktopLayout()) {
+        const handle = splitLineDesktop;
+        if (handle) {
+            handle.style.left = (splitFraction * 100) + '%';
+            handle.style.top = '0px';
+            handle.style.height = '100%';
+        }
+    } else {
+        const handle = splitLineMobile;
+        if (handle) {
+            handle.style.top = (splitFraction * 100) + '%';
+            handle.style.left = '0px';
+            handle.style.width = '100%';
+        }
+    }
+    updateSkipGeometry();
+}
+
+function splitFractionFromPoint(clientX, clientY) {
+    const rect = cameraBoxEl ? cameraBoxEl.getBoundingClientRect() : { left: 0, top: 0, width: 1, height: 1 };
+    const isVertical = isDesktopLayout();
+    const coord = isVertical ? clientX - rect.left : clientY - rect.top;
+    const size = isVertical ? rect.width : rect.height;
+    const frac = size > 0 ? coord / size : 0.5;
+    return Math.min(0.98, Math.max(0.02, frac));
+}
+
+function onSplitMove(e) {
+    applySplitPosition(splitFractionFromPoint(e.clientX, e.clientY));
+}
+
+function stopSplitDrag() {
+    splitDragging = false;
+    window.removeEventListener('pointermove', onSplitMove);
+    window.removeEventListener('pointerup', stopSplitDrag);
+}
+
+function startSplitDrag(e) {
+    e.preventDefault();
+    splitDragging = true;
+    window.addEventListener('pointermove', onSplitMove);
+    window.addEventListener('pointerup', stopSplitDrag, { once: true });
+    applySplitPosition(splitFractionFromPoint(e.clientX, e.clientY));
+}
+
+if (splitLineMobile) splitLineMobile.addEventListener('pointerdown', startSplitDrag);
+if (splitLineDesktop) splitLineDesktop.addEventListener('pointerdown', startSplitDrag);
+
+// Skip-Side Overlays: click region beside the red split line = excluded from capture
+const skipOverlayLeft = document.getElementById('skip-overlay-left');
+const skipOverlayRight = document.getElementById('skip-overlay-right');
+const skipOverlayTop = document.getElementById('skip-overlay-top');
+const skipOverlayBottom = document.getElementById('skip-overlay-bottom');
+let skipSide = null;
+
+function skipFromClick(sideKey) {
+    return function () {
+        skipSide = (skipSide === sideKey) ? null : sideKey;
+        updateSkipOverlays();
+    };
+}
+
+function updateSkipOverlays() {
+    const before = isDesktopLayout() ? skipOverlayLeft : skipOverlayTop;
+    const after = isDesktopLayout() ? skipOverlayRight : skipOverlayBottom;
+    [skipOverlayLeft, skipOverlayRight, skipOverlayTop, skipOverlayBottom].forEach(function (el) {
+        if (!el) return;
+        const side = (el === skipOverlayLeft || el === skipOverlayTop) ? 'before' : 'after';
+        const isCurrent = (el === before || el === after);
+        const active = isCurrent && skipSide === side;
+        el.style.display = isCurrent ? 'block' : 'none';
+        el.classList.toggle('bg-red-400/35', active);
+        const pill = el.querySelector('.skip-pill');
+        if (pill) pill.classList.toggle('hidden', !active);
+    });
+}
+
+function updateSkipGeometry() {
+    const pct = (splitFraction * 100).toString() + '%';
+    if (skipOverlayLeft) {
+        skipOverlayLeft.style.left = '0';
+        skipOverlayLeft.style.top = '0';
+        skipOverlayLeft.style.width = pct;
+        skipOverlayLeft.style.height = '100%';
+        skipOverlayLeft.style.right = 'auto';
+        skipOverlayLeft.style.bottom = 'auto';
+    }
+    if (skipOverlayRight) {
+        skipOverlayRight.style.left = pct;
+        skipOverlayRight.style.top = '0';
+        skipOverlayRight.style.right = '0';
+        skipOverlayRight.style.bottom = '0';
+        skipOverlayRight.style.width = 'auto';
+        skipOverlayRight.style.height = '100%';
+    }
+    if (skipOverlayTop) {
+        skipOverlayTop.style.left = '0';
+        skipOverlayTop.style.top = '0';
+        skipOverlayTop.style.width = '100%';
+        skipOverlayTop.style.height = pct;
+        skipOverlayTop.style.right = 'auto';
+        skipOverlayTop.style.bottom = 'auto';
+    }
+    if (skipOverlayBottom) {
+        skipOverlayBottom.style.left = '0';
+        skipOverlayBottom.style.top = pct;
+        skipOverlayBottom.style.right = '0';
+        skipOverlayBottom.style.bottom = '0';
+        skipOverlayBottom.style.width = '100%';
+        skipOverlayBottom.style.height = 'auto';
+    }
+}
+
+if (skipOverlayLeft) skipOverlayLeft.addEventListener('click', skipFromClick('before'));
+if (skipOverlayRight) skipOverlayRight.addEventListener('click', skipFromClick('after'));
+if (skipOverlayTop) skipOverlayTop.addEventListener('click', skipFromClick('before'));
+if (skipOverlayBottom) skipOverlayBottom.addEventListener('click', skipFromClick('after'));
+
+window.addEventListener('resize', function () {
+    updateSkipGeometry();
+    updateSkipOverlays();
+});
+
+applySplitPosition(0.5);
+updateSkipOverlays();
+
+function getSplitRatio() {
+    return frameFracFromBox(splitFraction, isDesktopLayout());
+}
+
+// Mobile Crop Edge Adjusters (Top / Bottom lines dragged toward the center)
+const cropLineTop = document.getElementById('crop-line-top');
+const cropLineBottom = document.getElementById('crop-line-bottom');
+const MIN_CROP_GAP = 0.05;
+let cropTopFrac = 0.02;
+let cropBottomFrac = 0.98;
+
+function cropFracFromY(clientY) {
+    const rect = cameraBoxEl ? cameraBoxEl.getBoundingClientRect() : { top: 0, height: 1 };
+    const size = rect.height > 0 ? rect.height : 1;
+    return Math.min(1, Math.max(0, (clientY - rect.top) / size));
+}
+
+function applyCropTop() {
+    if (cropLineTop) cropLineTop.style.top = 'calc(' + (cropTopFrac * 100) + '% - 20px)';
+}
+
+function applyCropBottom() {
+    if (cropLineBottom) cropLineBottom.style.bottom = 'calc(' + ((1 - cropBottomFrac) * 100) + '% - 20px)';
+}
+
+function startCropDrag(onMove) {
+    return function dragStart(e) {
+        e.preventDefault();
+        window.addEventListener('pointermove', onMove);
+        const stop = function () {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', stop);
+            window.removeEventListener('pointercancel', stop);
+        };
+        window.addEventListener('pointerup', stop, { once: true });
+        window.addEventListener('pointercancel', stop, { once: true });
+        onMove(e);
+    };
+}
+
+const onCropTopMove = function (e) {
+    cropTopFrac = Math.min(cropFracFromY(e.clientY), cropBottomFrac - MIN_CROP_GAP);
+    applyCropTop();
+};
+
+const onCropBottomMove = function (e) {
+    cropBottomFrac = Math.max(cropFracFromY(e.clientY), cropTopFrac + MIN_CROP_GAP);
+    applyCropBottom();
+};
+
+if (cropLineTop) cropLineTop.addEventListener('pointerdown', startCropDrag(onCropTopMove));
+if (cropLineBottom) cropLineBottom.addEventListener('pointerdown', startCropDrag(onCropBottomMove));
+
+applyCropTop();
+applyCropBottom();
+
+// Desktop Crop Edge Adjusters (Left / Right lines dragged toward the center)
+const cropLineLeft = document.getElementById('crop-line-left');
+const cropLineRight = document.getElementById('crop-line-right');
+let cropLeftFrac = 0.02;
+let cropRightFrac = 0.98;
+
+function cropFracFromX(clientX) {
+    const rect = cameraBoxEl ? cameraBoxEl.getBoundingClientRect() : { left: 0, width: 1 };
+    const size = rect.width > 0 ? rect.width : 1;
+    return Math.min(1, Math.max(0, (clientX - rect.left) / size));
+}
+
+function applyCropLeft() {
+    if (cropLineLeft) cropLineLeft.style.left = 'calc(' + (cropLeftFrac * 100) + '% - 20px)';
+}
+
+function applyCropRight() {
+    if (cropLineRight) cropLineRight.style.right = 'calc(' + ((1 - cropRightFrac) * 100) + '% - 20px)';
+}
+
+const onCropLeftMove = function (e) {
+    cropLeftFrac = Math.min(cropFracFromX(e.clientX), cropRightFrac - MIN_CROP_GAP);
+    applyCropLeft();
+};
+
+const onCropRightMove = function (e) {
+    cropRightFrac = Math.max(cropFracFromX(e.clientX), cropLeftFrac + MIN_CROP_GAP);
+    applyCropRight();
+};
+
+if (cropLineLeft) cropLineLeft.addEventListener('pointerdown', startCropDrag(onCropLeftMove));
+if (cropLineRight) cropLineRight.addEventListener('pointerdown', startCropDrag(onCropRightMove));
+
+applyCropLeft();
+applyCropRight();
+
+// Desktop Top / Bottom Crop Edge Adjusters (same concept as mobile)
+const cropLineTopDesktop = document.getElementById('crop-line-top-desktop');
+const cropLineBottomDesktop = document.getElementById('crop-line-bottom-desktop');
+let cropTopFracDesktop = 0.02;
+let cropBottomFracDesktop = 0.98;
+
+function applyCropTopDesktop() {
+    if (cropLineTopDesktop) cropLineTopDesktop.style.top = 'calc(' + (cropTopFracDesktop * 100) + '% - 20px)';
+}
+
+function applyCropBottomDesktop() {
+    if (cropLineBottomDesktop) cropLineBottomDesktop.style.bottom = 'calc(' + ((1 - cropBottomFracDesktop) * 100) + '% - 20px)';
+}
+
+const onCropTopMoveDesktop = function (e) {
+    cropTopFracDesktop = Math.min(cropFracFromY(e.clientY), cropBottomFracDesktop - MIN_CROP_GAP);
+    applyCropTopDesktop();
+};
+
+const onCropBottomMoveDesktop = function (e) {
+    cropBottomFracDesktop = Math.max(cropFracFromY(e.clientY), cropTopFracDesktop + MIN_CROP_GAP);
+    applyCropBottomDesktop();
+};
+
+if (cropLineTopDesktop) cropLineTopDesktop.addEventListener('pointerdown', startCropDrag(onCropTopMoveDesktop));
+if (cropLineBottomDesktop) cropLineBottomDesktop.addEventListener('pointerdown', startCropDrag(onCropBottomMoveDesktop));
+
+applyCropTopDesktop();
+applyCropBottomDesktop();
+
+function frameFracFromBox(frac, alongWidth) {
+    const rect = cameraBoxEl ? cameraBoxEl.getBoundingClientRect() : null;
+    if (!rect || !rect.width || !rect.height || !video.videoWidth || !video.videoHeight) return frac;
+    const fit = getComputedStyle(video).objectFit;
+    const k = fit === 'cover'
+        ? Math.max(rect.width / video.videoWidth, rect.height / video.videoHeight)
+        : Math.min(rect.width / video.videoWidth, rect.height / video.videoHeight);
+    const display = (alongWidth ? video.videoWidth : video.videoHeight) * k;
+    const box = alongWidth ? rect.width : rect.height;
+    const frame = alongWidth ? video.videoWidth : video.videoHeight;
+    const f = (frac * box + (display - box) / 2) / (frame * k);
+    return Math.min(1, Math.max(0, f));
+}
+
+function getCropRatios() {
+    if (isDesktopLayout()) {
+        return {
+            top: frameFracFromBox(cropTopFracDesktop, false),
+            bottom: frameFracFromBox(cropBottomFracDesktop, false),
+            left: frameFracFromBox(cropLeftFrac, true),
+            right: frameFracFromBox(cropRightFrac, true)
+        };
+    }
+    return {
+        top: frameFracFromBox(cropTopFrac, false),
+        bottom: frameFracFromBox(cropBottomFrac, false),
+        left: 0.0,
+        right: 1.0
+    };
+}
+
+// Add Newly Scanned Page Card to UI
+function appendPageCard(b64, pageNumber) {
+    // Remove Empty States
+    const desktopEmpty = document.getElementById('desktop-empty-state');
+    if (desktopEmpty) desktopEmpty.remove();
+
+    const mobileEmpty = document.getElementById('mobile-empty-state');
+    if (mobileEmpty) mobileEmpty.remove();
+
+    // 1. Append to Desktop Sidebar List (Clean card, no ready pill)
+    if (desktopPagesList) {
+        const dCard = document.createElement('div');
+        dCard.className = 'page-card bg-white p-2.5 rounded-[0.4em] border border-neutral-200 hover:border-neutral-300 transition flex flex-col gap-2 shadow-sm animate-fade-in';
+        dCard.innerHTML = `
+            <div class="w-full aspect-[1/1.414] bg-neutral-100 rounded-[0.4em] overflow-hidden flex items-center justify-center border border-neutral-100">
+                <img src="data:image/jpeg;base64,${b64}" alt="Scanned Page ${pageNumber}" class="w-full h-full p-[0.8em] object-cover">
+            </div>
+            <div class="flex items-center justify-between px-1 py-0.5">
+                <span class="text-xs font-medium text-neutral-700">Page #${pageNumber}</span>
+            </div>
+        `;
+        desktopPagesList.appendChild(dCard);
+        desktopPagesList.scrollTo({ top: desktopPagesList.scrollHeight, behavior: 'smooth' });
+    }
+
+    // 2. Append to Mobile Slide-up Drawer Scrollable Stream (Not in cards)
+    if (mobileDrawerPages) {
+        const mItem = document.createElement('div');
+        mItem.className = 'page-scroll-item w-full max-w-lg @container animate-fade-in';
+        mItem.innerHTML = `
+            <div class="relative w-full rounded-[0.4em] border border-neutral-200 overflow-hidden bg-neutral-100 pt-[0.75em] pb-[1.5em] h-[calc(100cqw+2.25em)]">
+                <img src="data:image/jpeg;base64,${b64}" alt="Page ${pageNumber}" class="w-full h-full object-contain">
+                <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-[11px] font-medium text-neutral-600">Page ${pageNumber}</span>
+            </div>
+        `;
+        mobileDrawerPages.appendChild(mItem);
+    }
+}
+
+// Unified Capture Handler
+function triggerCapture(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isCapturing) return;
+    if (!video.videoWidth || !video.videoHeight) return;
+
+    isCapturing = true;
+    flashShutter();
+    setCaptureLoading(true);
+
+    // Render to Native Video Resolution Canvas
+    const captureCanvas = document.createElement('canvas');
+    captureCanvas.width = video.videoWidth;
+    captureCanvas.height = video.videoHeight;
+    const ctx = captureCanvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+    captureCanvas.toBlob(blob => {
+        if (!blob) {
+            isCapturing = false;
+            setCaptureLoading(false);
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', blob, 'spread.jpg');
+        const crop = getCropRatios();
+        if (skipSide) {
+            const splitFrame = getSplitRatio();
+            const alongWidth = isDesktopLayout();
+            if (skipSide === 'before') {
+                if (alongWidth) crop.left = Math.max(crop.left, splitFrame);
+                else crop.top = Math.max(crop.top, splitFrame);
+            } else {
+                if (alongWidth) crop.right = Math.min(crop.right, splitFrame);
+                else crop.bottom = Math.min(crop.bottom, splitFrame);
+            }
+        }
+        formData.append('split_ratio', String(getSplitRatio()));
+        formData.append('crop_top', String(crop.top));
+        formData.append('crop_bottom', String(crop.bottom));
+        formData.append('crop_left', String(crop.left));
+        formData.append('crop_right', String(crop.right));
+        formData.append('skip_split', skipSide ? '1' : '0');
+
+        fetch('/capture', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            isCapturing = false;
+            setCaptureLoading(false);
+            if (data.status === 'success') {
+                totalPages = data.total_pages;
+
+                // Update Counters
+                if (mobileBadge) mobileBadge.innerText = totalPages;
+                if (sidebarCountNum) sidebarCountNum.innerText = totalPages;
+
+                // Enable Desktop Export Button
+                if (desktopExportBtn) {
+                    desktopExportBtn.classList.remove('pointer-events-none', 'opacity-40', 'bg-neutral-200', 'text-neutral-400');
+                    desktopExportBtn.classList.add('bg-blue-100', 'hover:bg-blue-200', 'text-blue-700', 'hover:text-blue-800', 'border', 'border-blue-300', 'hover:border-blue-400');
+                }
+
+                // Enable Drawer Download Button
+                if (drawerDownloadBtn) {
+                    drawerDownloadBtn.classList.remove('pointer-events-none', 'opacity-40', 'bg-neutral-200', 'text-neutral-400');
+                    drawerDownloadBtn.classList.add('bg-neutral-900', 'hover:bg-neutral-800', 'text-white');
+                }
+
+                // Append the newly split pages
+                if (data.new_pages && data.new_pages.length > 0) {
+                    const startIdx = totalPages - data.new_pages.length + 1;
+                    data.new_pages.forEach((p_b64, idx) => {
+                        appendPageCard(p_b64, startIdx + idx);
+                    });
+                }
+            }
+        })
+        .catch(err => {
+            isCapturing = false;
+            setCaptureLoading(false);
+            console.error('Capture upload failed', err);
+        });
+    }, 'image/jpeg', 0.95);
+}
+
+// Attach Button Listeners
+if (mobileCaptureBtn) {
+    mobileCaptureBtn.addEventListener('click', triggerCapture);
+}
+if (desktopCaptureBtn) {
+    desktopCaptureBtn.addEventListener('click', triggerCapture);
+}
+
+// Keyboard Shortcut on Desktop: Enter or Space triggers capture
+window.addEventListener('keydown', (e) => {
+    if (isDesktopLayout()) return;
+    // Ignore if active element is an input or textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+    }
+
+    if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        triggerCapture(e);
+    }
+});
+
+// Start the scanner feed immediately on page load
+startScannerCamera();

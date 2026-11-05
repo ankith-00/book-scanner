@@ -1,0 +1,15 @@
+// DOM refs shared by capture.js and drawer.js, plus pages state
+const video = document.getElementById('video');
+const mobileCaptureBtn = document.getElementById('mobile-capture-btn');
+const desktopCaptureBtn = document.getElementById('desktop-capture-btn');
+const mobileBadge = document.getElementById('mobile-badge');
+const sidebarCountNum = document.getElementById('sidebar-count-num');
+const desktopExportBtn = document.getElementById('desktop-export-btn');
+const drawerDownloadBtn = document.getElementById('drawer-download-btn');
+const drawer = document.getElementById('review-drawer');
+const cameraFlash = document.getElementById('camera-flash');
+const desktopPagesList = document.getElementById('desktop-pages-list');
+const mobileDrawerPages = document.getElementById('mobile-drawer-pages');
+
+let isCapturing = false;
+let totalPages = {{ pages | length }};

@@ -1,0 +1,78 @@
+<!-- CAMERA BOX: Completely borderless and square on mobile, styled on desktop -->
+<div id="camera-box" class="relative flex-1 w-full h-full border-0 md:border md:border-neutral-200 md:rounded-[0.4em] overflow-hidden bg-black flex items-center justify-center min-h-0 shadow-none md:shadow-sm">
+    <video id="video" autoplay playsinline class="w-full h-full object-cover md:object-contain bg-transparent"></video>
+
+    <!-- SKIP-SIDE OVERLAYS: click a half of the red split line to exclude it from capture; click again to reset -->
+    <div id="skip-overlay-left" class="absolute cursor-pointer">
+        <span class="skip-pill bi bi-x-circle absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl text-red-500 drop-shadow-md pointer-events-none hidden"></span>
+    </div>
+    <div id="skip-overlay-right" class="absolute cursor-pointer">
+        <span class="skip-pill bi bi-x-circle absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl text-red-500 drop-shadow-md pointer-events-none hidden"></span>
+    </div>
+    <div id="skip-overlay-top" class="absolute cursor-pointer">
+        <span class="skip-pill bi bi-x-circle absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl text-red-500 drop-shadow-md pointer-events-none hidden"></span>
+    </div>
+    <div id="skip-overlay-bottom" class="absolute cursor-pointer">
+        <span class="skip-pill bi bi-x-circle absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl text-red-500 drop-shadow-md pointer-events-none hidden"></span>
+    </div>
+
+    <!-- DYNAMIC GUIDE LINES (Split Line + Crop Edge Adjusters) -->
+    <div id="split-line" class="absolute inset-0 pointer-events-none z-10">
+        <!-- Mobile Crop Edge Adjusters: wide invisible grab zones, drag top down / bottom up toward center -->
+        <div id="crop-line-top" class="block md:hidden absolute left-0 top-0 w-full h-10 flex items-center pointer-events-auto cursor-s-resize touch-none select-none">
+            <div class="w-full h-[2px] shrink-0 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"></div>
+            <div class="absolute left-[18%] top-1/2 -translate-y-1/2 w-16 h-5 rounded-full bg-amber-400 border-2 border-white/90 shadow-lg flex items-center justify-center gap-1">
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+            </div>
+        </div>
+        <div id="crop-line-bottom" class="block md:hidden absolute left-0 bottom-0 w-full h-10 flex items-center pointer-events-auto cursor-n-resize touch-none select-none">
+            <div class="w-full h-[2px] shrink-0 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"></div>
+            <div class="absolute left-[18%] top-1/2 -translate-y-1/2 w-16 h-5 rounded-full bg-amber-400 border-2 border-white/90 shadow-lg flex items-center justify-center gap-1">
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+            </div>
+        </div>
+
+        <!-- Mobile Horizontal Split Crease -->
+        <div id="split-line-mobile" class="block md:hidden absolute left-0 top-0 w-full h-[2px] bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] pointer-events-auto cursor-n-resize touch-none select-none"></div>
+
+        <!-- Desktop Crop Edge Adjusters: wide invisible grab zones, drag left/right/top/bottom edges toward the center -->
+        <div id="crop-line-left" class="hidden md:flex absolute top-0 left-0 h-full w-10 flex-col items-center pointer-events-auto cursor-ew-resize touch-none select-none">
+            <div class="h-full w-[2px] shrink-0 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-16 w-5 rounded-full bg-amber-400 border-2 border-white/90 shadow-lg flex flex-col items-center justify-center gap-1">
+                <div class="w-[3px] h-3.5 bg-white/90 rounded-full"></div>
+                <div class="w-[3px] h-3.5 bg-white/90 rounded-full"></div>
+            </div>
+        </div>
+        <div id="crop-line-right" class="hidden md:flex absolute top-0 right-0 h-full w-10 flex-col items-center pointer-events-auto cursor-ew-resize touch-none select-none">
+            <div class="h-full w-[2px] shrink-0 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-16 w-5 rounded-full bg-amber-400 border-2 border-white/90 shadow-lg flex flex-col items-center justify-center gap-1">
+                <div class="w-[3px] h-3.5 bg-white/90 rounded-full"></div>
+                <div class="w-[3px] h-3.5 bg-white/90 rounded-full"></div>
+            </div>
+        </div>
+        <div id="crop-line-top-desktop" class="hidden md:flex absolute left-0 top-0 w-full h-10 items-center pointer-events-auto cursor-s-resize touch-none select-none">
+            <div class="w-full h-[2px] shrink-0 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"></div>
+            <div class="absolute left-[18%] top-1/2 -translate-y-1/2 w-16 h-5 rounded-full bg-amber-400 border-2 border-white/90 shadow-lg flex items-center justify-center gap-1">
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+            </div>
+        </div>
+        <div id="crop-line-bottom-desktop" class="hidden md:flex absolute left-0 bottom-0 w-full h-10 items-center pointer-events-auto cursor-n-resize touch-none select-none">
+            <div class="w-full h-[2px] shrink-0 bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.85)]"></div>
+            <div class="absolute left-[18%] top-1/2 -translate-y-1/2 w-16 h-5 rounded-full bg-amber-400 border-2 border-white/90 shadow-lg flex items-center justify-center gap-1">
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+                <div class="w-3.5 h-[3px] bg-white/90 rounded-full"></div>
+            </div>
+        </div>
+
+        <!-- Desktop Vertical Split Crease (Draggable Red Line) -->
+        <div id="split-line-desktop" class="hidden md:block absolute left-0 top-0 h-full w-[2px] bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] pointer-events-auto cursor-ew-resize touch-none select-none"></div>
+    </div>
+
+    <!-- Camera Flash Animation Feedback -->
+    <div id="camera-flash" class="absolute inset-0 bg-white pointer-events-none opacity-0 transition-opacity duration-150 z-20"></div>
+
+    {% include 'components/mobile-controls.html' %}
+</div>
