@@ -1,4 +1,5 @@
 import io
+import os
 import uuid
 import base64
 
@@ -248,7 +249,8 @@ def build_pdf():
 
 
 def main():
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
 
 
 if __name__ == '__main__':
